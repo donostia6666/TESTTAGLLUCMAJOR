@@ -1,0 +1,43 @@
+name: Compilar y publicar APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Compilar APK instalable
+        run: gradle --no-daemon assembleDebug
+
+      - name: Preparar APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk TAG-Llucmajor.apk
+
+      - name: Publicar APK en GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view v1.3.0 >/dev/null 2>&1; then
+            gh release upload v1.3.0 TAG-Llucmajor.apk --clobber
+          else
+            gh release create v1.3.0 TAG-Llucmajor.apk --target "$GITHUB_SHA" --title "TAG Llucmajor v1.3.0" --notes "APK Android del test TAG Llucmajor. Banco V5 auditado."
+          fi
